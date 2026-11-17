@@ -1,0 +1,11 @@
+{
+  "name": "wishtory-catalog",
+  "private": true,
+  "type": "module",
+  "description": "Data and pictures for the Wishtory app. Plain Node, no dependencies.",
+  "engines": { "node": ">=22.2" },
+  "scripts": {
+    "check": "node scripts/validate.mjs",
+    "build": "node scripts/build.mjs"
+  }
+}

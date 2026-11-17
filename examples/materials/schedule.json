@@ -1,0 +1,24 @@
+{
+  "books": [
+    {
+      "id": "teachings_of_charity",
+      "name": "Charity",
+      "title": "Teachings of Charity",
+      "days": [
+        1,
+        4
+      ]
+    }
+  ],
+  "weapons": [
+    {
+      "id": "the_frost_emperors_revival",
+      "name": "Frost Emperor",
+      "title": "The Frost Emperor's Revival",
+      "days": [
+        3,
+        6
+      ]
+    }
+  ]
+}
