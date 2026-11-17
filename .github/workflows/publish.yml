@@ -1,0 +1,74 @@
+name: Check and publish
+
+# Every push is checked. Only a push to main that passes every check is signed and published.
+# A failed check publishes nothing: the problems are listed in the run's summary and as
+# messages naming the file, so the live data stays exactly as it was.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check the baskets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+      - name: Check items, banners and materials
+        run: node scripts/validate.mjs
+      # The worked examples are never published, but they must stay valid: they show the format.
+      - name: Check the worked examples
+        run: node scripts/validate.mjs --root examples
+
+  publish:
+    name: Sign and publish
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    # One publish at a time, and a running one is never cancelled half way.
+    concurrency:
+      group: publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+      # What is published now, so the new version is always higher. If it cannot be read the run
+      # stops here instead of guessing.
+      - name: Read the published version
+        id: published
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          set -euo pipefail
+          version="$(node scripts/published-version.mjs "https://${OWNER,,}.github.io/${REPO}/v1/own.envelope.json")"
+          echo "Published version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Assemble, sign and verify
+        env:
+          CATALOG_SIGNING_KEY: ${{ secrets.CATALOG_SIGNING_KEY }}
+          PUBLISHED: ${{ steps.published.outputs.version }}
+        run: node scripts/build.mjs --published "$PUBLISHED"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist/site
+      - name: Publish
+        id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
