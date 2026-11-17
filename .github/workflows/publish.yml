@@ -26,6 +26,9 @@ jobs:
       # The worked examples are never published, but they must stay valid: they show the format.
       - name: Check the worked examples
         run: node scripts/validate.mjs --root examples
+      # The tests of the scripts themselves (plain node:test, nothing to install).
+      - name: Run the tests
+        run: npm test
 
   publish:
     name: Sign and publish

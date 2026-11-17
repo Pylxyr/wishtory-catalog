@@ -41,11 +41,18 @@ const BANNER_ID = /^[a-z0-9][a-z0-9._-]{0,79}$/;
 const list = (values) => values.map((v) => `"${v}"`).join(', ');
 const isText = (v, max) => typeof v === 'string' && v.trim() !== '' && v.length <= max && !/[\u0000-\u001f]/.test(v);
 
+const CLOCK_SHAPE = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/;
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+// A real date and time on the game's server clock: "2026-11-03 15:00:00". The day must exist in
+// that month (leap years included), so 2026-02-31 is refused while 2028-02-29 is fine.
 export function isClock(value) {
-  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(value);
+  const m = CLOCK_SHAPE.exec(value);
   if (!m) return false;
-  const [, , mo, d, h, mi, s] = m.map(Number);
-  return mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && h < 24 && mi < 60 && s < 60;
+  const [, year, mo, d, h, mi, s] = m.map(Number);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const lastDay = mo === 2 && leap ? 29 : DAYS_IN_MONTH[mo - 1];
+  return mo >= 1 && mo <= 12 && d >= 1 && d <= lastDay && h < 24 && mi < 60 && s < 60;
 }
 
 export function validate(rootFolder) {
@@ -358,7 +365,8 @@ export function validate(rootFolder) {
     else if (!POOLS[raw.game].includes(raw.pool)) problem(path, `"pool" is ${JSON.stringify(raw.pool)}, but ${raw.game} banners use ${list(POOLS[raw.game])}. The pool is the pity the banner shares with other banners of that pool.`);
     if (!isText(raw.name, 160)) problem(path, '"name" is the banner\'s title, 1 to 160 characters.');
     for (const field of ['start', 'end']) {
-      if (typeof raw[field] !== 'string' || !isClock(raw[field])) problem(path, `"${field}" must look like "2026-11-03 15:00:00" (the game's server clock, date, a space, time).`);
+      if (typeof raw[field] !== 'string' || !CLOCK_SHAPE.test(raw[field])) problem(path, `"${field}" must look like "2026-11-03 15:00:00" (the game's server clock, date, a space, time).`);
+      else if (!isClock(raw[field])) problem(path, `"${field}" says "${raw[field]}", which is not a real date and time. Check that the day exists in that month and that the time is between 00:00:00 and 23:59:59.`);
     }
     if (isClock(raw.start ?? '') && isClock(raw.end ?? '') && raw.start > raw.end) problem(path, '"start" is later than "end".');
     const five = raw.featured_5;

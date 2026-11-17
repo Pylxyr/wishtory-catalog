@@ -21,7 +21,7 @@ function Ask([string]$Question, [string]$Default = '') {
 
 function AskChoice([string]$Question, [string[]]$Choices, [string]$Default = '') {
     while ($true) {
-        $answer = (Ask "$Question ($($Choices -join ', '))" $Default).ToLower()
+        $answer = (Ask "$Question ($($Choices -join ', '))" $Default).ToLowerInvariant()
         if ($Choices -contains $answer) { return $answer }
         Write-Host "  Please type one of: $($Choices -join ', ')" -ForegroundColor Yellow
     }
@@ -32,6 +32,15 @@ function AskRequired([string]$Question, [string]$Default = '') {
         $answer = Ask $Question $Default
         if ($answer -ne '') { return $answer }
         Write-Host '  This one cannot be empty.' -ForegroundColor Yellow
+    }
+}
+
+function AskPattern([string]$Question, [string]$Pattern, [string]$Hint, [string]$Default = '') {
+    # For answers that become part of a file name: ask again until the answer is one the check allows.
+    while ($true) {
+        $answer = AskRequired $Question $Default
+        if ($answer -cmatch $Pattern) { return $answer }
+        Write-Host "  $Hint" -ForegroundColor Yellow
     }
 }
 
@@ -66,11 +75,13 @@ function JsonStringList([string[]]$Values) {
 
 function WriteFileUtf8([string]$Path, [string]$Content) {
     # UTF-8 without the invisible byte-order mark that Windows PowerShell 5 adds otherwise.
+    # The folder is made first: a fresh clone has no banners/ folder until the first banner exists.
+    [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($Path))
     [System.IO.File]::WriteAllText($Path, $Content, (New-Object System.Text.UTF8Encoding($false)))
 }
 
 function Slug([string]$Text) {
-    $slug = $Text.ToLower() -replace '[^a-z0-9]+', '-'
+    $slug = $Text.ToLowerInvariant() -replace '[^a-z0-9]+', '-'
     return $slug.Trim('-')
 }
 
@@ -86,6 +97,7 @@ function CopyPicture([string]$Source, [string]$TargetFolder, [string]$BaseName) 
         Write-Host "  $Source is not a .png or .webp file - add the picture by hand later as $BaseName.png" -ForegroundColor Yellow
         return
     }
+    [void][System.IO.Directory]::CreateDirectory($TargetFolder) # materials/pictures/ does not exist until the first series picture
     Copy-Item -LiteralPath $Source -Destination (Join-Path $TargetFolder ($BaseName + $extension)) -Force
 }
 
@@ -112,6 +124,7 @@ function NewItem {
     $kind = AskChoice 'What kind of item?' $Kinds[$game] 'character'
     $name = AskRequired 'English name (for example Mitya)'
     $slug = Slug $name
+    if ($slug -eq '') { throw "A folder name cannot be made from '$name'. Run this again and write the English name with the letters a to z or digits." }
     $folder = Join-Path $Root "items/$game/$slug"
     if (Test-Path $folder) { throw "$folder already exists. Edit it instead of adding it again." }
     $id = AskRequired "The game's item number, digits only (for example 10000136)"
@@ -161,7 +174,7 @@ function NewBanner {
     $start = AskRequired 'Starts (server clock, like 2026-11-03 15:00:00)'
     $end = AskRequired 'Ends (like 2026-11-24 17:59:59)'
     $suggested = "$game-$pool-" + $start.Substring(0, [Math]::Min(10, $start.Length))
-    $id = AskRequired 'Banner id (also the file name)' $suggested
+    $id = AskPattern 'Banner id (also the file name)' '^[a-z0-9][a-z0-9._-]{0,79}$' 'Use lowercase letters, digits, dots, dashes and underscores only (up to 80, no spaces or slashes).' $suggested
     $five = AskList 'Featured 5-star item ids'
     $four = AskList 'Featured 4-star item ids'
     $gacha = AskList 'Game gacha ids (Star Rail and Zenless only)'
@@ -195,13 +208,14 @@ function NewSeries {
     $group = AskChoice 'Is it a talent book or a weapon material series?' @('book', 'weapon') 'book'
     $title = AskRequired 'Full name (for example Teachings of Charity)'
     $name = AskRequired 'Short name (for example Charity)'
-    $id = AskRequired 'Series id' ((Slug $title) -replace '-', '_')
+    $id = AskPattern 'Series id' '^[a-z0-9_]+$' 'Use lowercase letters, digits and underscores only, for example teachings_of_charity.' ((Slug $title) -replace '-', '_')
     $dayText = AskRequired 'Weekdays it can be farmed, Monday=1 to Saturday=6 (for example 1,4)'
     $days = @()
     foreach ($d in $dayText.Split(',')) { $days += [int]($d.Trim()) }
 
     $path = Join-Path $Root 'materials/schedule.json'
-    $current = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+    # Read as UTF-8 on purpose: Windows PowerShell 5 would read this file as ANSI and garble non-English letters.
+    $current = [System.IO.File]::ReadAllText($path, (New-Object System.Text.UTF8Encoding($false))) | ConvertFrom-Json
     $books = @()
     $weapons = @()
     foreach ($b in @($current.books)) { if ($b) { $books += [pscustomobject]@{ id = $b.id; name = $b.name; title = $b.title; days = @($b.days) } } }
@@ -233,7 +247,9 @@ $node = Get-Command node -ErrorAction SilentlyContinue
 if ($node) {
     Write-Host ''
     Write-Host 'Checking everything now...'
-    & node (Join-Path $Root 'scripts/validate.mjs')
+    # From the repository folder, so it is this repository that gets checked wherever the helper was started.
+    Push-Location $Root
+    try { & node 'scripts/validate.mjs' } finally { Pop-Location }
 } else {
     Write-Host ''
     Write-Host 'Node.js is not installed here, so the check was skipped. It runs on GitHub when you push.'

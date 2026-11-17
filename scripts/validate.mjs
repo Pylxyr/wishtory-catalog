@@ -1,6 +1,7 @@
 // Checks the baskets and says, in plain words, what is wrong and in which file.
 //   node scripts/validate.mjs [--root <folder>]
 // Exit code 0 = everything is fine, 1 = problems found (nothing may be published).
+import './lib/node-version.mjs'; // first: stops loudly on a Node.js too old for import.meta.main
 import { appendFileSync } from 'node:fs';
 import { validate } from './lib/validate.mjs';
 

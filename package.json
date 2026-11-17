@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "description": "Data and pictures for the Wishtory app. Plain Node, no dependencies.",
-  "engines": { "node": ">=22.2" },
+  "engines": { "node": "^22.18.0 || >=24.2.0" },
   "scripts": {
     "check": "node scripts/validate.mjs",
-    "build": "node scripts/build.mjs"
+    "build": "node scripts/build.mjs",
+    "test": "node --test"
   }
 }

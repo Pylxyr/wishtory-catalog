@@ -1,11 +1,12 @@
 # wishtory-catalog
 
-The data and pictures behind the [Wishtory](https://github.com/Pylxyr/Wishtory) app: characters, weapons,
+The data and pictures for the [Wishtory](https://github.com/Pylxyr/Wishtory) app: characters, weapons,
 banners and the weekly farming schedule. You put plain files in folders and push. A GitHub Action checks them,
 signs them and publishes them as static files on GitHub Pages. There is no server and nothing to run by hand.
 
 Published at `https://pylxyr.github.io/wishtory-catalog/v1/` (the signed data is `own.envelope.json` there).
-No wish or account data is ever sent to this site: the app only downloads from it.
+The Wishtory app does not read this data yet. This is a static site: nothing is ever sent to it, so no wish or
+account data can end up here.
 
 ## The three baskets
 
@@ -42,8 +43,8 @@ problem in plain words with the file it is in. The check refuses:
 ## Limits worth knowing
 
 GitHub Pages sites may be at most 1 GB, have a soft limit of 100 GB of traffic a month, and a deployment that
-takes over 10 minutes times out. A custom Actions workflow like this one is not subject to the 10 builds per
-hour limit. The build stops at 900 MB. Pages is not meant for commercial use.
+takes over 10 minutes times out. A custom Actions workflow like this one is not subject to the soft limit of 10
+builds per hour. The build stops at 900 MB. Pages is not meant as free hosting for an online business or shop.
 
 The pictures are game artwork. They belong to their owners; this repository only hosts what you add. Check the
 official fan-content rules of the game's publisher before you publish artwork, and keep the credits in the

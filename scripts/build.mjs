@@ -6,8 +6,9 @@
 //                          gets a new address (the app keeps pictures by address)
 //   v1/materials/...       one picture per farming series
 // The signing key comes from CATALOG_SIGNING_KEY (the PEM text) or CATALOG_SIGNING_KEY_FILE.
+import './lib/node-version.mjs'; // first: stops loudly on a Node.js too old for import.meta.main
 import { createHash } from 'node:crypto';
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { printReport } from './validate.mjs';
 import { validate, totalBytes } from './lib/validate.mjs';
@@ -71,6 +72,16 @@ export function assemble(data, { version, now = new Date(), site }) {
   };
 }
 
+// Every picture the signed data names must be a real file under <site>/v1/. Returns the ones that are not.
+export function missingPictures(document, site) {
+  const named = [
+    ...document.items.flatMap((item) => Object.values(item.pictures)),
+    ...document.schedule.books.map((series) => series.picture),
+    ...document.schedule.weapons.map((series) => series.picture),
+  ];
+  return named.filter((path) => !existsSync(join(site, 'v1', path)));
+}
+
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const option = (name, fallback) => {
@@ -126,6 +137,8 @@ if (import.meta.main) {
   // The last check: what was written must open with the pinned key and refer only to pictures that exist.
   const reopened = openEnvelope(readFileSync(join(site, 'v1', 'own.envelope.json')), pinnedPublicKey());
   if (!reopened || !reopened.equals(payload)) fail('the signed file could not be verified after writing it. Nothing is published.');
+  const missing = missingPictures(JSON.parse(reopened.toString('utf8')), site);
+  if (missing.length > 0) fail(`the signed data names ${missing.length} picture(s) that are not in the site, for example ${missing[0]}. Nothing is published.`);
   const size = totalBytes(site);
   if (size > MAX_SITE_BYTES) fail(`the published site would be ${(size / 1048576).toFixed(0)} MB; GitHub Pages allows 1 GB. Remove pictures or make them smaller.`);
 
