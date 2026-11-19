@@ -5,6 +5,7 @@ name: Check and publish
 # messages naming the file, so the live data stays exactly as it was.
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
