@@ -20,6 +20,14 @@ account data can end up here.
 The folder `examples/` holds one finished example of each basket (Mitya, Starsealed Edict). It is checked on
 every push but never published. Formats and the routines are in [docs/adding-things.md](docs/adding-things.md).
 
+## The editor (no JSON by hand)
+
+Double-click `tools\ui.cmd` (or run `node tools/ui.mjs`). Your browser opens a local page with forms for
+characters and weapons, banners and farming series, and drag-and-drop boxes for the pictures. Every save is
+checked with the same code GitHub uses, and a save that would break something is undone with the reason shown.
+**Publish** commits and pushes; GitHub then checks, signs and publishes. The page listens on this computer only
+and nothing is sent anywhere else. Pictures dropped in are checked for size and real PNG/WebP content.
+
 ## What the check refuses
 
 Before anything is published, every push is checked, and one problem stops the publish. The run lists each
@@ -56,4 +64,5 @@ Wishtory app up to date.
 - [docs/rollback.md](docs/rollback.md): undo a bad publish
 - [docs/signing-key.md](docs/signing-key.md): back up and replace the signing key
 - [docs/moving-host.md](docs/moving-host.md): move to another host later
+- `tools/ui.cmd`: the local editor described above
 - `tools/add.ps1`: a Windows PowerShell helper that asks questions and writes the files for you
