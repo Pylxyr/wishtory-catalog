@@ -17,17 +17,24 @@ export function printReport(result, { title = 'Check' } = {}) {
       lines.push('', `Problem ${i + 1} of ${problems.length}`, `  File:  ${p.file}`, `  What:  ${p.message}`);
     });
   }
+  const { warnings = [] } = result;
+  if (warnings.length > 0) {
+    lines.push('', `${warnings.length} warning(s). These do not stop a publish, but are worth a look:`);
+    warnings.forEach((w) => lines.push(`  ${w.file}: ${w.message}`));
+  }
   console.log(lines.join('\n'));
   if (process.env.GITHUB_ACTIONS) {
     const escape = (s) => s.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
     const prop = (s) => escape(s).replace(/:/g, '%3A').replace(/,/g, '%2C');
     for (const p of problems) console.log(`::error file=${prop(p.file)},title=${prop('Wishtory data problem')}::${escape(p.message)}`);
+    for (const w of warnings) console.log(`::warning file=${prop(w.file)},title=${prop('Wishtory data warning')}::${escape(w.message)}`);
   }
   if (process.env.GITHUB_STEP_SUMMARY) {
     const md = problems.length === 0
       ? `### ${title}: everything is in order\n${counts}.\n`
       : `### ${title}: ${problems.length} problem(s) found\nNothing was published. Fix these and push again:\n\n${problems.map((p) => `- **${p.file}**: ${p.message}`).join('\n')}\n`;
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${md}\n`);
+    const warned = warnings.length === 0 ? '' : `\n**${warnings.length} warning(s)** (they do not stop a publish):\n\n${warnings.map((w) => `- **${w.file}**: ${w.message}`).join('\n')}\n`;
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${md}${warned}\n`);
   }
 }
 

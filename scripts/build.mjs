@@ -2,8 +2,9 @@
 //   node scripts/build.mjs [--root <folder>] [--out <folder>] [--published <version>] [--version <n>]
 // Writes <out>/site/ (this folder is what gets published):
 //   v1/own.envelope.json   the signed data: items, banners, farming schedule, picture addresses
-//   v1/pictures/...        the item pictures, named with a short fingerprint so a changed picture
-//                          gets a new address (the app keeps pictures by address)
+//   v1/pictures/...        the item pictures, named with the picture's own SHA-256 fingerprint, so a
+//                          changed picture gets a new address (the app keeps pictures by address)
+//                          and a downloaded picture can be checked against its name
 //   v1/materials/...       one picture per farming series
 // The signing key comes from CATALOG_SIGNING_KEY (the PEM text) or CATALOG_SIGNING_KEY_FILE.
 import './lib/node-version.mjs'; // first: stops loudly on a Node.js too old for import.meta.main
@@ -17,7 +18,7 @@ import { loadPrivateKey, signEnvelope, openEnvelope, pinnedPublicKey } from './l
 const MAX_PAYLOAD_BYTES = 3.5 * 1024 * 1024; // the app accepts 4 MiB; stay clear of it
 const MAX_SITE_BYTES = 900 * 1024 * 1024; // GitHub Pages sites may be no larger than 1 GB
 
-const fingerprint = (buf) => createHash('sha256').update(buf).digest('hex').slice(0, 8);
+const fingerprint = (buf) => createHash('sha256').update(buf).digest('hex');
 const byText = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
 export function assemble(data, { version, now = new Date(), site }) {

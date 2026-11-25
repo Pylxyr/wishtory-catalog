@@ -17,5 +17,5 @@ Pages may serve the old files for a few minutes.
 - To undo several commits, revert each one, newest first.
 - Do not use `git reset --hard` and `git push --force` for this: the live data would stay as it is until a new
   publish, and the version number logic is built for forward-only history.
-- Pictures are named with a short fingerprint of their contents, so a reverted picture comes back under its old
+- Pictures are named with the SHA-256 of their contents, so a reverted picture comes back under its old
   address and apps that kept the old one simply use it.

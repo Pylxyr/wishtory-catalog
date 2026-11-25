@@ -1,7 +1,8 @@
 # Adding things
 
-Every routine ends the same way: **push, then look at the Actions tab**. Green means published. Red means
-nothing was published; open the run and read the list of problems.
+Every routine ends the same way: **push, then look at the Actions tab**. Green means published and checked online.
+Red means something was not published or is not online yet; open the run and read the list of problems.
+Yellow warnings (a picture that is not square, a banner that looks added twice) do not stop anything.
 
 Files can be written by hand or with the helper: `powershell -ExecutionPolicy Bypass -File .\tools\add.ps1`.
 Always do things in this order: **series, then items, then banner** (a banner needs its items; an item needs its

@@ -5,7 +5,6 @@ name: Check and publish
 # messages naming the file, so the live data stays exactly as it was.
 on:
   push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -19,6 +18,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
@@ -50,6 +51,8 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
@@ -76,3 +79,9 @@ jobs:
       - name: Publish
         id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      # A green publish must mean the world can download exactly what was built. This waits for the
+      # site to serve it (Pages can take a minute) and fails the run if it never does.
+      - name: Verify what is online
+        env:
+          PAGE_URL: ${{ steps.deploy.outputs.page_url }}
+        run: node scripts/verify-live.mjs "$PAGE_URL" dist/site

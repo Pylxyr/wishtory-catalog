@@ -167,6 +167,10 @@ const git = (...args) =>
 async function publish(message) {
   const result = validate(ROOT);
   if (result.problems.length > 0) return { ok: false, text: `Not published: ${result.problems.length} problem(s) to fix first. Press Check to see them.` };
+  const branch = await git('rev-parse', '--abbrev-ref', 'HEAD');
+  if (!branch.ok || branch.text !== 'main') {
+    return { ok: false, text: `Publish only works from the main branch, and this folder is on "${branch.text}". Switch with: git switch main` };
+  }
   const lines = [];
   const step = async (title, ...args) => {
     const r = await git(...args);
@@ -177,6 +181,12 @@ async function publish(message) {
   const staged = await git('diff', '--cached', '--quiet');
   if (staged.ok) lines.push('Nothing new to publish.');
   else if (!(await step('Saving', 'commit', '-m', message || 'Update catalog data'))) return { ok: false, text: lines.join('\n\n') };
+  // Take in what changed online since the last pull (for example a dependency update), so the push is not refused.
+  if (!(await step('Updating from GitHub', 'pull', '--rebase'))) {
+    await git('rebase', '--abort');
+    lines.push('Nothing was lost: your changes are saved here. Fix the conflict with git, or ask for help, then press Publish again.');
+    return { ok: false, text: lines.join('\n\n') };
+  }
   if (!(await step('Pushing', 'push'))) return { ok: false, text: lines.join('\n\n') };
   lines.push('Pushed. Open the repository\'s Actions tab: green means published, red means nothing was published.');
   return { ok: true, text: lines.join('\n\n') };
@@ -189,6 +199,7 @@ function state() {
     banners: result.banners.map(({ file, ...b }) => b),
     schedule: { books: result.schedule.books, weapons: result.schedule.weapons },
     problems: result.problems,
+    warnings: result.warnings,
   };
 }
 

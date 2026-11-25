@@ -272,11 +272,19 @@ $('saveSeries').addEventListener('click', async () => {
 });
 
 // ---- check & publish ----
-function showReport(problems) {
+function showReport(problems, warnings) {
   $('report').innerHTML = problems.length === 0
     ? '<strong style="color:var(--ok)">Everything is in order.</strong>'
     : '<strong style="color:var(--bad)">' + problems.length + ' problem(s). Nothing can be published until they are fixed.</strong>' + problems.map((p) => '<p><b></b><br><span></span></p>').join('');
   [...$('report').querySelectorAll('p')].forEach((p, i) => { p.querySelector('b').textContent = problems[i].file; p.querySelector('span').textContent = problems[i].message; });
+  if (warnings && warnings.length) {
+    const box = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = warnings.length + ' warning(s). They do not stop a publish, but are worth a look.';
+    box.append(title);
+    for (const w of warnings) { const p = document.createElement('p'); const b = document.createElement('b'); b.textContent = w.file; const span = document.createElement('span'); span.textContent = w.message; p.append(b, document.createElement('br'), span); box.append(p); }
+    $('report').append(box);
+  }
 }
 $('check').addEventListener('click', () => refresh(true));
 $('publish').addEventListener('click', async () => {
@@ -297,7 +305,7 @@ async function refresh(report) {
     b.addEventListener('click', () => { $('sGroup').value = group; $('sId').value = s.id; $('sName').value = s.name; $('sTitle').value = s.title; $('sDays').querySelectorAll('input').forEach((c) => { c.checked = s.days.includes(Number(c.value)); }); resetZone('series'); });
     $('seriesList').append(b);
   }
-  itemFormShape(); bannerShape(); showReport(data.problems);
+  itemFormShape(); bannerShape(); showReport(data.problems, data.warnings);
   if (report) say(data.problems.length ? data.problems.length + ' problem(s) found.' : 'Everything is in order.', !data.problems.length);
 }
 onGame(); bannerShape(); refresh().catch((e) => say(e.message, false));

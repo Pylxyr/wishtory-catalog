@@ -37,7 +37,22 @@ problem in plain words with the file it is in. The check refuses:
 - pictures that are not a real PNG or WebP (the contents are read, not the file name), cut-off or damaged
   pictures, icons over 512 KB, wish art over 3 MB, or sides under 16 or over 4096 pixels;
 - an item without its required pictures, two items with the same id, a banner that features an item that does
-  not exist, an item that names a farming series that does not exist, and a series without its picture.
+  not exist, an item that names a farming series that does not exist, and a series without its picture;
+- an item folder name over 60 characters.
+
+It also **warns** (the run is marked, the publish still goes ahead) about an icon or series picture that is not
+square, and about a banner that has the same pool, dates and 5-star items as another one.
+
+## After a publish
+
+The last step of the run waits for the site to serve the new files, then checks that the signed file online is
+byte for byte the one just built and that every picture it names is online and is the very same picture. If
+that never becomes true the run turns red, so a green run means the world can download exactly what was built.
+Run it again from the Actions tab if it fails. The workflow's own actions are pinned to exact commits, and
+Dependabot proposes updates (a week after they are released) as pull requests that go through the same check.
+
+Each picture's file name contains the SHA-256 of its contents (`icon.<64 hex digits>.png`), and the signed file
+names the pictures, so an app can check a downloaded picture against its name.
 
 ## One-time setup
 

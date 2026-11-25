@@ -1,0 +1,12 @@
+# Keeps the pinned GitHub Actions (each is pinned to an exact commit) up to date. Updates arrive as
+# pull requests that go through the same check; a new release waits a week before it is proposed.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "ci"

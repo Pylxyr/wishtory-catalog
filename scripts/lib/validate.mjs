@@ -58,6 +58,7 @@ export function isClock(value) {
 export function validate(rootFolder) {
   const root = resolve(rootFolder);
   const problems = [];
+  const warnings = []; // worth a look, never stops a publish
   const rel = (path) => relative(root, path).split('\\').join('/');
   const problem = (file, message) => problems.push({ file: isAbsolute(file) ? rel(file) : file, message });
 
@@ -95,7 +96,7 @@ export function validate(rootFolder) {
   };
 
   // A picture file: contents checked, then size and dimensions.
-  const readPicture = (path, maxBytes, what) => {
+  const readPicture = (path, maxBytes, what, { square = false } = {}) => {
     const buf = readFileSync(path);
     if (buf.length > maxBytes) {
       problem(path, `This ${what} is ${(buf.length / 1024).toFixed(0)} KB; the limit is ${(maxBytes / 1024).toFixed(0)} KB. Make it smaller (export at a lower size).`);
@@ -109,6 +110,9 @@ export function validate(rootFolder) {
     if (info.width < LIMITS.minSide || info.height < LIMITS.minSide || info.width > LIMITS.maxSide || info.height > LIMITS.maxSide) {
       problem(path, `This ${what} is ${info.width}x${info.height} pixels; each side must be between ${LIMITS.minSide} and ${LIMITS.maxSide}.`);
       return undefined;
+    }
+    if (square && info.width !== info.height) {
+      warnings.push({ file: rel(path), message: `This ${what} is ${info.width}x${info.height} pixels, not square. The app shows it in a square frame, so it may look squeezed or cut off.` });
     }
     return { file: rel(path), buf, format: info.format, width: info.width, height: info.height };
   };
@@ -138,8 +142,8 @@ export function validate(rootFolder) {
   }
 
   function readItem(dir, game, slug) {
-    if (!SLUG.test(slug)) {
-      problem(dir, `The folder name "${slug}" is not allowed. Use lowercase letters, digits and single dashes, for example "starsealed-edict".`);
+    if (!SLUG.test(slug) || slug.length > 60) {
+      problem(dir, `The folder name "${slug}" is not allowed. Use lowercase letters, digits and single dashes, at most 60 characters, for example "starsealed-edict".`);
     }
     const files = new Map();
     for (const entry of entries(dir)) {
@@ -211,7 +215,7 @@ export function validate(rootFolder) {
     const pictures = {};
     const iconPath = files.get('icon');
     if (!iconPath) problem(dir, 'Missing picture: this item needs icon.png (or icon.webp).');
-    else pictures.icon = readPicture(iconPath, LIMITS.icon, 'icon');
+    else pictures.icon = readPicture(iconPath, LIMITS.icon, 'icon', { square: true });
     const wishPath = files.get('wish');
     if (raw.kind === 'character') {
       if (!wishPath) problem(dir, 'Missing picture: a character needs wish.png (or wish.webp), the wish art.');
@@ -312,7 +316,7 @@ export function validate(rootFolder) {
       problem(path, `There are two pictures for the series "${m[1]}". Keep only one.`);
       continue;
     }
-    const picture = readPicture(path, LIMITS.icon, 'series picture');
+    const picture = readPicture(path, LIMITS.icon, 'series picture', { square: true });
     if (picture) seriesPictures.set(m[1], picture);
     else seriesPictures.set(m[1], null); // present but bad: already reported, do not also report it missing
   }
@@ -406,7 +410,18 @@ export function validate(rootFolder) {
     });
   }
 
-  return { problems, items, banners, schedule, seriesPictures };
+  // Two banners that agree on everything that matters are almost always one banner added twice.
+  const twins = new Map();
+  for (const banner of banners) {
+    const key = [banner.game, banner.pool, banner.start, banner.end, [...banner.featured_5].sort().join(',')].join('|');
+    if (twins.has(key)) {
+      warnings.push({ file: banner.file, message: `This banner has the same pool, dates and 5-star items as ${twins.get(key)}. If it is not meant to be a second copy, remove one of them.` });
+    } else {
+      twins.set(key, banner.file);
+    }
+  }
+
+  return { problems, warnings, items, banners, schedule, seriesPictures };
 }
 
 export function totalBytes(path) {
